@@ -55,7 +55,8 @@ function compileTS (module) {
     "--target",
     options.targetES5 ? "ES5" : "ES3", !! options.moduleKind ? "--module" : "", !! options.moduleKind ? options.moduleKind : "",
     "--outDir",
-    path.join(tmpDir, relativeFolder),
+    // path.join(tmpDir, relativeFolder),
+    path.join(tmpDir, ""), // just the default path
     libPath,
     options.nodeLib ? path.resolve(__dirname, "typings/node.d.ts") : null,
     module.filename
@@ -83,6 +84,29 @@ function compileTS (module) {
   tscScript.runInNewContext(sandbox);
   if (exitCode != 0) {
     throw new Error('Unable to compile TypeScript file.');
+  }
+  // now you have to get the root of the project
+  // find out relative path of the file in project 
+  var baseJSname = path.join(tmpDir, path.basename(module.filename, ".ts") + ".js");
+  if(fs.existsSync(baseJSname) && isModified(module.filename, jsname)){
+     // if a file was created in the home directory and the real target file is not modified
+     // then moove the file
+     // console.log("Moving the compiled file to appropriate folder " + baseJSname + " => " + jsname);
+     // before the file can be moved, make sure the target directory exists
+     var targetFolder = path.dirname(jsname);
+     var folders2create = [];
+     while(!fs.existsSync(targetFolder)){
+	folders2create.push(path.basename(targetFolder));
+	targetFolder = path.dirname(targetFolder);
+     }
+
+     while(folders2create.length > 0){
+	targetFolder = path.join(targetFolder, folders2create.pop());
+	// console.log("Creating folder " + targetFolder);
+	fs.mkdirSync(targetFolder);
+     }
+    
+     fs.renameSync(baseJSname, jsname);
   }
 
   return jsname;
